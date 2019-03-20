@@ -1,0 +1,26 @@
+body {
+  /* padding: 50px; */
+  /*font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;*/
+  font-family: 'Bubblegum Sans', cursive;
+  color: #fff;
+}
+
+a {
+  color: #00B7FF;
+}
+
+.vote-wrapper {
+	padding: 20px;
+}
+
+.replaced {
+  display:  inline-flex;
+  text-align: center;
+  flex-direction: column;
+  color: #D56D75;
+}
+.replaced small {
+  font-size: 12px;
+  color: #94C37A;
+  text-decoration: none !important;
+}
