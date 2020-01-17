@@ -7,7 +7,7 @@
     <script src="//cdn.jsdelivr.net/npm/phaser@3.13.0/dist/phaser.min.js"></script>
 	<script src="//cdn.jsdelivr.net/npm/comfy.js/dist/comfy.min.js"></script>
 	<script src="https://alca.sfo2.cdn.digitaloceanspaces.com/sharex/2019/12/06/twemoji-parser.js"></script>
-    <link href="//fonts.googleapis.com/css?family=Permanent+Marker" rel="stylesheet">
+    <link href="//fonts.googleapis.com/css?family=Chilanka" rel="stylesheet">
   </head>
   <body>
 	  <div id="penguindrop"></div>
@@ -180,7 +180,10 @@
   				var dropPosition = getRandomInt(768);
   				// var userMarble = phaser.physics.add.image(dropPosition, 65, 'wizball');
   				var userMarble = collisions.create(dropPosition, -165, marbleImage);
-  				var userText = phaser.add.text(dropPosition, -190, username);
+  				var userText = phaser.add.text(dropPosition, -190, username, {
+					"fontFamily": "Chilanka",
+					"fontSize": "20px"
+				});
   				userText.setOrigin( 0.5 );
   				userMarble.name = username;
   				userMarble.setScale( marbleScale );
