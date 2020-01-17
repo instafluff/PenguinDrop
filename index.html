@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ title }}</title>
+    <link rel='stylesheet' href='public/stylesheets/style.css' />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.13.0/dist/phaser.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/comfy.js/dist/comfy.min.js"></script>
+	<script src="https://alca.sfo2.cdn.digitaloceanspaces.com/sharex/2019/12/06/twemoji-parser.js"></script>
+    <link href="//fonts.googleapis.com/css?family=Permanent+Marker" rel="stylesheet">
+  </head>
+  <body>
+	  <div id="penguindrop"></div>
+  	<script>
+		let params = new URLSearchParams( location.search );
+		// console.log( params.get( "channel" ) );
+  		var config = {
+  			type: Phaser.AUTO,
+  			width: 1280,
+  			height: 800,
+  			transparent: true,
+  			parent: 'penguindrop',
+  			physics: {
+  					default: 'arcade',
+  					arcade: {
+  							// debug: true,
+  							gravity: { y: 0 }
+  					}
+  			},
+  			scene: {
+  					preload: preload,
+  					create: create,
+  					update: update
+  			}
+  		};
+
+  		var game = new Phaser.Game(config);
+  		var phaser = undefined;
+  		var blocks = [];
+  		var collisions;
+  		var balls = {};
+  		var walls = [];
+  		var star;
+  		var winners = {};
+  		var winnerText;
+  		var refreshTimer = null;
+  		var emoteList = {};
+		var emojiList = {};
+  		var paraList = {};
+
+  		function preload ()
+  		{
+  			this.load.image('waddles', 'images/waddles.png');
+  			this.load.image('piddles', 'images/piddles.png');
+  			this.load.image('parachute', 'images/parachute.png');
+  			this.load.image('target', 'images/target.png' );
+  		}
+
+  		function create ()
+  		{
+  			phaser = this;
+			// this.cameras.main.setBackgroundColor( "#4AAAAA" );
+  			this.game.antialias = true;
+  			this.game.clearBeforeRender = true;
+  			winnerText = this.add.text( 500, 100, "Winners!" );
+  			winnerText.setScale( 2 );
+			winnerText.visible = false;
+  			startGame();
+  		}
+
+  		function update() {
+  			for( var marble in balls ) {
+  				var marbleObj = balls[ marble ];
+  				marbleObj.text.x = marbleObj.object.x - 16;
+  				marbleObj.text.y = marbleObj.object.y - 100;
+
+  				if( marbleObj.object.y > 300 ) {
+  					marbleObj.object.body.velocity.y = 50;
+  					if( !paraList[ marbleObj.object.name ] ) {
+  						paraList[ marbleObj.object.name ] = phaser.add.image( marbleObj.object.x - 8, marbleObj.object.y - 32, "parachute" );
+  						marbleObj.object.setDepth(1);
+  					}
+  					paraList[ marbleObj.object.name ].x = marbleObj.object.x - 8;
+  					paraList[ marbleObj.object.name ].y = marbleObj.object.y - 32;
+  					// console.log( paraList[ marbleObj.object.name ] );
+  					paraList[ marbleObj.object.name ].angle = Math.sin( marbleObj.object.y / 20 ) * 10;
+  				}
+
+  				if( marbleObj.object.y > 730 ) {
+  					if( Math.abs( marbleObj.object.x - 640 ) < 128 ) {
+  						// POINTS AWARDED!
+  						if( !winners[ marbleObj.object.name ] ) {
+  							var points = ( 128 - Math.abs( marbleObj.object.x - 640 ) ).toFixed(2);
+  							winners[ marbleObj.object.name ] = points;
+  							ComfyJS.Say( "/me " + marbleObj.object.name + " landed for " + points + "!" );
+  							console.log( Object.keys( winners ) );
+  							var leaderboard = Object.keys( winners );
+  							leaderboard.sort( (a, b) => winners[ b ] - winners[ a ] );
+  							winnerText.setText( "Winners!\n" + leaderboard.map( x => winners[ x ] + " : " + x ).join( "\n" ) );
+  							serverPostScore( marbleObj.object.name, points );
+  						}
+  					}
+  					marbleObj.object.body.velocity.x = 0;
+  					marbleObj.object.body.velocity.y = 0;
+  					marbleObj.object.body.enable = false;
+  					// console.log( marbleObj.object.body );
+  					paraList[ marbleObj.object.name ].destroy();
+  					delete paraList[ marbleObj.object.name ];
+  				}
+  			}
+  		}
+
+  		// Game Server Functions
+  		function serverPostScore( player, score ) {
+  			return fetch( `http://localhost:9001/games/penguindrop/scores/leaderboard/${player}/${score}`, {
+  				method: "GET",
+  				mode: 'cors',
+  			});
+  		}
+
+  		function serverGetScore() {
+  			return fetch( `http://localhost:9001/games/penguindrop/scores/leaderboard/top`, {
+  				method: "GET",
+  				mode: 'cors',
+  			}).then( r => r.json() );
+  		}
+
+  		function serverResetScores() {
+  			return fetch( `http://localhost:9001/games/penguindrop/scores/leaderboard/delete`, {
+  				method: "GET",
+  				mode: 'cors',
+  			});
+  		}
+
+  		function startGame() {
+  			collisions = phaser.physics.add.group({
+  				bounceX: 0.95, bounceY: 0.6,
+  				// bounceX: 1, bounceY: 1,
+  				collideWorldBounds: true
+  			});
+  			var target = phaser.add.image( 640, 740, "target" );
+  			// serverResetScores();
+  		}
+
+  		function addUser( username, emote = "", emoji = "" ) {
+  			var marbleImage = Math.random() < 0.5 ? "waddles" : "piddles";
+  			var marbleScale = 1;
+  			if( emote ) {
+  				if( !emoteList[ emote ] ) {
+  					emoteList[ emote ] = true;
+  					var emoteUrl = "https://static-cdn.jtvnw.net/emoticons/v1/" + emote + "/3.0";
+  					phaser.load.image( "emote_" + emote, emoteUrl );
+  					phaser.load.start();
+  					setTimeout( () => {
+  						if( !balls[ username ] ) {
+  							addUser( username, emote );
+  						}
+  					}, 500 );
+  					return;
+  				}
+  				marbleImage = "emote_" + emote;
+  				marbleScale = 0.5;
+  			}
+			else if( emoji ) {
+  				if( !emojiList[ emoji ] ) {
+  					emojiList[ emoji ] = true;
+  					phaser.load.image( "emoji_" + emoji, emoji );
+  					phaser.load.start();
+  					setTimeout( () => {
+  						if( !balls[ username ] ) {
+  							addUser( username, "", emoji );
+  						}
+  					}, 500 );
+  					return;
+  				}
+				marbleImage = "emoji_" + emoji;
+				marbleScale = 1;
+			}
+  			if( !balls[ username ] ) {
+  				var dropPosition = getRandomInt(768);
+  				// var userMarble = phaser.physics.add.image(dropPosition, 65, 'wizball');
+  				var userMarble = collisions.create(dropPosition, -165, marbleImage);
+  				var userText = phaser.add.text(dropPosition, -190, username);
+  				userText.setOrigin( 0.5 );
+  				userMarble.name = username;
+  				userMarble.setScale( marbleScale );
+  				if( marbleScale < 1 ) {
+  					userMarble.setOrigin( 0.5 );
+  					userMarble.setCircle( 32 / marbleScale );
+  				}
+  				else {
+  					userMarble.setOrigin( 0.6 );
+  					userMarble.setCircle( 32 );
+  				}
+  				// console.log( userMarble );
+  				userMarble.setDrag( 0, 0 );
+  				userMarble.body.allowDrag = false;
+  				// userMarble.body.stopVelocityOnCollide = false;
+  				userMarble.allowRotation = true;
+  				// userMarble.setMass( 10 );
+  				// userMarble.setCollideWorldBounds(true);
+  				// userMarble.setBounce(1);
+  				userMarble.setVelocity(getRandomInt(600)-30, 1000);
+  				balls[ username ] = {
+  					text: userText,
+  					object: userMarble
+  				}
+  			}
+  		}
+
+  		function getRandomInt(max) {
+  		  return Math.floor(Math.random() * Math.floor(max));
+  		}
+
+  		$( document ).ready(function() {
+  			$("#penguindrop").hide();
+  		});
+
+		ComfyJS.onCommand = async ( user, command, message, flags, extra ) => {
+			switch( command ) {
+				case "dropscore":
+					var scores = await serverGetScore();
+					console.log( scores );
+					if( scores.length > 0 ) {
+						ComfyJS.Say( "/me HIGH SCORE: " + scores[ 0 ].player + " with " + scores[ 0 ].score + "!" );					}
+					break;
+				case "dropclear":
+					if( flags.broadcaster || flags.mod ) {
+						await serverResetScores();
+						ComfyJS.Say( "/me Scores have been reset!" );
+					}
+					break;
+				case "resetdrop":
+				case "refreshdrop":
+				case "reloaddrop":
+					if( flags.broadcaster || flags.mod ) {
+						location.reload();
+					}
+					break;
+				case "drop":
+					const emojis = twemoji.parse( message , { assetType: 'png' });
+					if( !extra.messageEmotes && emojis.length > 0 ) {
+						addUser( user, "", emojis[ 0 ].url );
+					}
+					else {
+						addUser( user, extra.messageEmotes ? Object.keys( extra.messageEmotes )[ 0 ] : "" );
+					}
+
+					$("#penguindrop").show();
+					if( refreshTimer ) {
+						clearTimeout( refreshTimer );
+					}
+					refreshTimer = setTimeout(() => {
+						location.reload();
+					}, 90000);
+					break;
+			}
+		}
+		ComfyJS.Init( params.get( "channel" ), params.get( "oauth" ) );
+  	</script>
+  </body>
+</html>
