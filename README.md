@@ -14,7 +14,7 @@ We built this Twitch-integrated Penguin Skydiving game live on Twitch for the Co
 
 ## Instructions ##
 
-Add this as a Browser Source and replace `yourchannel` with your Twitch username!
+Add this as a Browser Source (1280x720) and replace `yourchannel` with your Twitch username!
 
 [https://www.instafluff.tv/PenguinDrop?channel=yourchannel](https://www.instafluff.tv/PenguinDrop?channel=yourchannel)
 
