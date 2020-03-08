@@ -3,9 +3,9 @@
   <head>
     <title>PenguinDrop by Instafluff</title>
     <link rel='stylesheet' href='public/stylesheets/style.css' />
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/phaser@3.13.0/dist/phaser.min.js"></script>
-	<script src="//cdn.jsdelivr.net/npm/comfy.js/dist/comfy.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.13.0/dist/phaser.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/comfy.js/dist/comfy.min.js"></script>
 	<script src="https://alca.sfo2.cdn.digitaloceanspaces.com/sharex/2019/12/06/twemoji-parser.js"></script>
     <link href="//fonts.googleapis.com/css?family=Chilanka" rel="stylesheet">
   </head>
@@ -71,15 +71,18 @@
   		function update() {
   			for( var marble in balls ) {
   				var marbleObj = balls[ marble ];
+				// sets freefall? -Epic
   				marbleObj.text.x = marbleObj.object.x - 16;
   				marbleObj.text.y = marbleObj.object.y - 100;
 
+				// handles marbles after chute opens? -Epic
   				if( marbleObj.object.y > 300 ) {
   					marbleObj.object.body.velocity.y = 50;
   					if( !paraList[ marbleObj.object.name ] ) {
   						paraList[ marbleObj.object.name ] = phaser.add.image( marbleObj.object.x - 8, marbleObj.object.y - 32, "parachute" );
   						marbleObj.object.setDepth(1);
   					}
+					
   					paraList[ marbleObj.object.name ].x = marbleObj.object.x - 8;
   					paraList[ marbleObj.object.name ].y = marbleObj.object.y - 32;
   					// console.log( paraList[ marbleObj.object.name ] );
@@ -87,6 +90,7 @@
   				}
 
   				if( marbleObj.object.y > 730 ) {
+					// calculates points for fixed target location at x=640
   					if( Math.abs( marbleObj.object.x - 640 ) < 128 ) {
   						// POINTS AWARDED!
   						if( !winners[ marbleObj.object.name ] ) {
@@ -138,6 +142,7 @@
   				// bounceX: 1, bounceY: 1,
   				collideWorldBounds: true
   			});
+			// target is fixed -Epic
   			var target = phaser.add.image( 640, 740, "target" );
   			// serverResetScores();
   		}
