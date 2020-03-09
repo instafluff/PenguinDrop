@@ -14,7 +14,8 @@
   	<script>
 		let params = new URLSearchParams( location.search );
 		// console.log( params.get( "channel" ) );
-  		var config = {
+  		// Phaser config
+		var config = {
   			type: Phaser.AUTO,
   			width: 1280,
   			height: 800,
@@ -34,6 +35,7 @@
   			}
   		};
 
+		// global var config
   		var game = new Phaser.Game(config);
   		var phaser = undefined;
   		var blocks = [];
@@ -48,6 +50,7 @@
 		var emojiList = {};
   		var paraList = {};
 
+		// local image preloading, does not preload emotes
   		function preload ()
   		{
   			this.load.image('waddles', 'public/images/waddles.png');
@@ -56,6 +59,7 @@
   			this.load.image('target', 'public/images/target.png' );
   		}
 
+		// Phaser scene create
   		function create ()
   		{
   			phaser = this;
@@ -68,25 +72,93 @@
   			startGame();
   		}
 
+		function floatingUpdater(marbleObj) {
+			// handles ball floating updates including status and changing velocity
+
+			// current speed
+			var currentFloat = marbleObj.object.body.velocity.x;
+
+			// check if stop floating and prevents overspeed
+			if (marbleObj.floating){
+				// number adjusts likelyhood of stopping float
+				// higher number means longer floats, might push into walls
+				// also stops if speed exceeds 600
+				if (Math.random() > 0.992|| Math.abs(currentFloat) > 600){
+                                        marbleObj.floating = false;
+                                        marbleObj.floatDirection = 0;
+					if (currentFloat > 600) {
+						marbleObj.object.body.setVelocityX(600);
+					} else if (currentFloat < -600) {
+						marbleObj.object.body.setVelocityX(-600);
+					}
+					console.log("Ending Float", currentFloat);
+                                }
+			}
+
+			// check if start floating
+			// don't start floating if landed
+			if (!marbleObj.floating && marbleObj.object.y < 720) {
+				// number adjusts probability of starting float
+				// higher number means more floats
+				if(Math.random() > 0.995){
+					marbleObj.floating = true;
+					// set float direction
+					if (Math.random() > 0.5){
+						marbleObj.floatDirection = 1;
+					} else {
+						marbleObj.floatDirection = -1;
+					}
+					// prevents marbles from getting stuck at edges too much
+					if (marbleObj.object.x < 100) {
+						marbleObj.floatDirection = 1;
+					} else if (marbleObj.object.x > 1180) {
+						marbleObj.floatDirection = -1;
+					}
+					console.log("Starting Float Direction:", marbleObj.floatDirection, currentFloat);
+				}
+			}
+			if (marbleObj.floating) {
+				// changing baseFloatspeed changes effect of floating
+				// higher number equals faster speed changes
+				// might be worth generating a random baseFloatspeed per float
+				var baseFloatspeed = 12
+				var floatChange = (baseFloatspeed) * marbleObj.floatDirection;
+				marbleObj.object.body.setVelocityX(currentFloat + floatChange);
+			}
+		}
+
+		// update each frame(?), handles some ball updates, parachute wobble, and target detection
   		function update() {
   			for( var marble in balls ) {
   				var marbleObj = balls[ marble ];
-				// sets freefall? -Epic
+				// sets marble text location
   				marbleObj.text.x = marbleObj.object.x - 16;
   				marbleObj.text.y = marbleObj.object.y - 100;
 
-				// handles marbles after chute opens? -Epic
+				// handles marbles after chute opens
   				if( marbleObj.object.y > 300 ) {
+					// "gravity"
   					marbleObj.object.body.velocity.y = 50;
   					if( !paraList[ marbleObj.object.name ] ) {
   						paraList[ marbleObj.object.name ] = phaser.add.image( marbleObj.object.x - 8, marbleObj.object.y - 32, "parachute" );
   						marbleObj.object.setDepth(1);
   					}
-					
+					// handles floating
+					floatingUpdater(marbleObj);
+					// sets parachute render location
   					paraList[ marbleObj.object.name ].x = marbleObj.object.x - 8;
-  					paraList[ marbleObj.object.name ].y = marbleObj.object.y - 32;
+  					paraList[ marbleObj.object.name ].y = marbleObj.object.y;
+					paraList[ marbleObj.object.name ].setOrigin(0.5,0.8);
   					// console.log( paraList[ marbleObj.object.name ] );
-  					paraList[ marbleObj.object.name ].angle = Math.sin( marbleObj.object.y / 20 ) * 10;
+					// parachute angle based on Y coordinate
+  					// paraList[ marbleObj.object.name ].angle = Math.sin( marbleObj.object.y / 20 ) * 10;
+					// parachute angle based on X velocity
+					var marbleVelSqrt = Math.sqrt(Math.abs(marbleObj.object.body.velocity.x));
+					var marbleVelSign = Math.sign(marbleObj.object.body.velocity.x);
+					var marbleWobble = Math.sin(marbleObj.object.y/20)*8;
+					var marbleAngle = (marbleVelSqrt * marbleVelSign * -1) + marbleWobble;
+					paraList[ marbleObj.object.name ].angle = marbleAngle;
+					marbleObj.object.angle = marbleAngle;
   				}
 
   				if( marbleObj.object.y > 730 ) {
@@ -104,6 +176,7 @@
   							serverPostScore( marbleObj.object.name, points );
   						}
   					}
+					// stop marble
   					marbleObj.object.body.velocity.x = 0;
   					marbleObj.object.body.velocity.y = 0;
   					marbleObj.object.body.enable = false;
@@ -142,14 +215,17 @@
   				// bounceX: 1, bounceY: 1,
   				collideWorldBounds: true
   			});
-			// target is fixed -Epic
+			// target is fixed
   			var target = phaser.add.image( 640, 740, "target" );
   			// serverResetScores();
   		}
 
+		// adds a new falling marble when a chat user uses the !drop command
   		function addUser( username, emote = "", emoji = "" ) {
+			// randomly decides on penguin to use
   			var marbleImage = Math.random() < 0.5 ? "waddles" : "piddles";
   			var marbleScale = 1;
+			// if user uses an emote or emoji, uses that as the drop image instead of a penguin
   			if( emote ) {
   				if( !emoteList[ emote ] ) {
   					emoteList[ emote ] = true;
@@ -181,7 +257,9 @@
 				marbleImage = "emoji_" + emoji;
 				marbleScale = 1;
 			}
+			// checks if user already has an active ball
   			if( !balls[ username ] ) {
+				// random start position
   				var dropPosition = getRandomInt(768);
   				// var userMarble = phaser.physics.add.image(dropPosition, 65, 'wizball');
   				var userMarble = collisions.create(dropPosition, -165, marbleImage);
@@ -208,10 +286,13 @@
   				// userMarble.setMass( 10 );
   				// userMarble.setCollideWorldBounds(true);
   				// userMarble.setBounce(1);
-  				userMarble.setVelocity(getRandomInt(600)-30, 1000);
+				// sets random initial velocity
+  				userMarble.setVelocity(getRandomInt(1200)-600, 1000);
   				balls[ username ] = {
   					text: userText,
-  					object: userMarble
+  					object: userMarble,
+					floating: false,
+					floatDirection: 0
   				}
   			}
   		}
@@ -258,9 +339,10 @@
 					if( refreshTimer ) {
 						clearTimeout( refreshTimer );
 					}
+					// changes missed penguin reset time, production should be 90000
 					refreshTimer = setTimeout(() => {
 						location.reload();
-					}, 90000);
+					}, 16000);
 					break;
 			}
 		}
