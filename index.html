@@ -35,7 +35,7 @@
   			}
   		};
 
-		// global var config
+		// global var setup
   		var game = new Phaser.Game(config);
   		var phaser = undefined;
   		var blocks = [];
@@ -49,6 +49,14 @@
   		var emoteList = {};
 		var emojiList = {};
   		var paraList = {};
+		var target = {};
+
+		// config for newer features
+		var gotyConfig = {
+			windyFloat: false,
+			newChute: false,
+			randomTarget: false
+		}
 
 		// local image preloading, does not preload emotes
   		function preload ()
@@ -144,29 +152,34 @@
   						marbleObj.object.setDepth(1);
   					}
 					// handles floating
-					floatingUpdater(marbleObj);
+					if (gotyConfig.windyFloat) {
+						floatingUpdater(marbleObj);
+					}
 					// sets parachute render location
   					paraList[ marbleObj.object.name ].x = marbleObj.object.x - 8;
   					paraList[ marbleObj.object.name ].y = marbleObj.object.y;
 					paraList[ marbleObj.object.name ].setOrigin(0.5,0.8);
   					// console.log( paraList[ marbleObj.object.name ] );
-					// parachute angle based on Y coordinate
-  					// paraList[ marbleObj.object.name ].angle = Math.sin( marbleObj.object.y / 20 ) * 10;
-					// parachute angle based on X velocity
-					var marbleVelSqrt = Math.sqrt(Math.abs(marbleObj.object.body.velocity.x));
-					var marbleVelSign = Math.sign(marbleObj.object.body.velocity.x);
-					var marbleWobble = Math.sin(marbleObj.object.y/20)*8;
-					var marbleAngle = (marbleVelSqrt * marbleVelSign * -1) + marbleWobble;
-					paraList[ marbleObj.object.name ].angle = marbleAngle;
-					marbleObj.object.angle = marbleAngle;
+					if (!gotyConfig.newChute) {
+						// parachute angle based on Y coordinate
+						paraList[ marbleObj.object.name ].angle = Math.sin( marbleObj.object.y / 20 ) * 10;
+					} else {
+						// parachute angle based on X velocity
+						var marbleVelSqrt = Math.sqrt(Math.abs(marbleObj.object.body.velocity.x));
+						var marbleVelSign = Math.sign(marbleObj.object.body.velocity.x);
+						var marbleWobble = Math.sin(marbleObj.object.y/20)*8;
+						var marbleAngle = (marbleVelSqrt * marbleVelSign * -1) + marbleWobble;
+						paraList[ marbleObj.object.name ].angle = marbleAngle;
+						marbleObj.object.angle = marbleAngle;
+					}
   				}
 
   				if( marbleObj.object.y > 730 ) {
-					// calculates points for fixed target location at x=640
-  					if( Math.abs( marbleObj.object.x - 640 ) < 128 ) {
+					// calculates points for target location
+					if( Math.abs( marbleObj.object.x - target.targetSpot ) < 128 ) {
   						// POINTS AWARDED!
   						if( !winners[ marbleObj.object.name ] ) {
-  							var points = ( 128 - Math.abs( marbleObj.object.x - 640 ) ).toFixed(2);
+							var points = ( 128 - Math.abs( marbleObj.object.x - target.targetSpot ) ).toFixed(2);
   							winners[ marbleObj.object.name ] = points;
   							ComfyJS.Say( "/me " + marbleObj.object.name + " landed for " + points + "!" );
   							console.log( Object.keys( winners ) );
@@ -215,10 +228,21 @@
   				// bounceX: 1, bounceY: 1,
   				collideWorldBounds: true
   			});
-			// target is fixed
-  			var target = phaser.add.image( 640, 740, "target" );
+			// create a new target
+			createTarget();
   			// serverResetScores();
   		}
+
+		function createTarget() {
+			// creates a new target if needed
+			if (gotyConfig.randomTarget) {
+				var targetSpot = getRandomInt(624) + 328;
+			} else {
+				var targetSpot = 640;
+			}
+			target["targetSpot"] = targetSpot;
+			target["image"] = phaser.add.image(targetSpot, 740, "target");
+		}
 
 		// adds a new falling marble when a chat user uses the !drop command
   		function addUser( username, emote = "", emoji = "" ) {
@@ -342,7 +366,7 @@
 					// changes missed penguin reset time, production should be 90000
 					refreshTimer = setTimeout(() => {
 						location.reload();
-					}, 16000);
+					}, 90000);
 					break;
 			}
 		}
