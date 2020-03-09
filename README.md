@@ -31,6 +31,12 @@ The following commands are available to the Broadcaster and Moderators:
 
 - `resetdrop` - Reset the game
 
+## Config ##
+Set these to true under gotyConfig to enable some enhanced features:
+windyFloat: Adds some additional randomness, occasionally changing the paratroopers' speed back and forth.
+newChute: Changes the paratroopers' animation, making it change with their direction and speed.
+randomTarget: Randomizes the target location. Still stays away from the edges, but moves around when it needs a new target.
+
 ## Credits ##
 Thank you to all the participants of this project!
 
